@@ -1,0 +1,174 @@
+x-common-env: &common-env
+  MINIO_ENDPOINT: "minio:9000"
+  MINIO_ACCESS_KEY: "minioadmin"
+  MINIO_SECRET_KEY: "minioadmin"
+  MINIO_BUCKET_UNPROCESSED: "unprocessed"
+  MINIO_BUCKET_PROCESSED: "processed"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  CELERY_BROKER_URL: "redis://redis:6379/0"
+  CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+  TRITON_SERVER_URL: "inference-service:8001" # URL for grpc
+
+
+services:
+  tts-service:
+    build:
+      context: .
+      dockerfile: ./services/tts-service/Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+    networks:
+      - voiceflow-net
+    depends_on: 
+      - minio
+      - inference-service
+
+  stt-service:
+    build:
+      context: .
+      dockerfile: ./services/stt-service/Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+    networks:
+      - voiceflow-net
+    depends_on: 
+      - minio
+      - inference-service
+
+  orchestrator:
+    build:
+      context: .
+      dockerfile: ./services/orchestrator/Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+    networks:
+      - voiceflow-net
+    depends_on: 
+      - redis
+      - tts-service
+      - stt-service
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: ./services/api-gateway/Dockerfile
+    restart: unless-stopped
+    ports:
+      # Maps port 8000 of the host to port 8000 of the container
+      - "8000:8000"
+    environment:
+      <<: *common-env
+    networks:
+      - voiceflow-net
+    depends_on:
+      - orchestrator # Ensures the gateway doesn't start before it can send tasks
+      - minio
+
+  cleanup-worker:
+    build: 
+      context: .
+      dockerfile: ./services/cleanup-worker/Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+    networks:
+      - voiceflow-net
+    depends_on:
+      - redis
+      - minio
+
+  demo-ui:
+    build:
+      context: .
+      dockerfile: ./services/demo-ui/Dockerfile
+    restart: unless-stopped
+    ports:
+      # Maps port 7860 of the host to port 7860 of the container
+      - "7860:7860"
+    environment:
+      # This allows us to change where the UI points without rebuilding the image
+      - API_GATEWAY_URL=http://api-gateway:8000
+      - MINIO_URL=http://minio:9000
+      # Gemini API configuration (set these in your .env file)
+      - MODEL_API_KEY=
+      - MODEL_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+      - MODEL_NAME=gemini-2.0-flash
+    networks:
+      - voiceflow-net
+    depends_on:
+      - api-gateway # Ensures the UI doesn't start before its backend is ready
+    
+
+  inference-service:
+    build:
+      context: .
+      dockerfile: ./services/inference-service/Dockerfile
+    restart: unless-stopped
+    environment:
+      # Available whisper models:
+      # - tiny ~ 1GB RAM
+      # - base ~ 1GB RAM
+      # - small ~ 2GB RAM
+      # - medium ~ 5GB RAM
+      # - large ~ 10GB RAM
+      # - turbo ~ 6GB RAM
+      - WHISPER_MODEL_SIZE=small
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      - ./services/inference-service/model_repository:/model_repository
+    networks:
+      - voiceflow-net
+
+  redis:
+    image: "redis:7-alpine"
+    restart: unless-stopped
+    networks:
+      - voiceflow-net
+    command: redis-server --notify-keyspace-events KEA
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    hostname: minio
+    # This command starts the minio server and tells it where to store data,
+    # and which address to use for the web console.
+    command: server /data --console-address ":9001"
+    environment:
+      <<: *common-env
+    volumes:
+      # This ensures that all data stored in MinIO persists even if the
+      # container is restarted or removed.
+      - ./data/minio:/data
+    ports:
+      - "9000:9000" # MinIO API
+    networks:
+      - voiceflow-net
+    healthcheck:
+      # This healthcheck ensures that other services don't start until
+      # MinIO is fully ready to accept connections.
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+networks:
+  voiceflow-net:
+    driver: bridge
+    # This network allows all services to communicate with each other
+    # using their service names as hostnames.
+    driver_opts:
+      com.docker.network.bridge.name: voiceflow-net
+
+volumes:
+  minio_data:
+  redis_data:

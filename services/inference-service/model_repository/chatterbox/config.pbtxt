@@ -1,0 +1,19 @@
+name: "chatterbox"
+backend: "python"
+max_batch_size: 8
+
+input [
+  {
+    name: "text_input"
+    data_type: TYPE_STRING
+    dims: [ 1 ]
+  }
+]
+
+output [
+  {
+    name: "audio_output"
+    data_type: TYPE_UINT8
+    dims: [ -1 ]
+  }
+]

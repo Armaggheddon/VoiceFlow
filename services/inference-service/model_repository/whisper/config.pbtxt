@@ -1,0 +1,19 @@
+name: "whisper"
+backend: "python"
+max_batch_size: 1
+
+input [
+  {
+    name: "audio_input"
+    data_type: TYPE_UINT8
+    dims: [ -1 ]
+  }
+]
+
+output [
+  {
+    name: "transcribed_text"
+    data_type: TYPE_STRING
+    dims: [ 1 ]
+  }
+]
