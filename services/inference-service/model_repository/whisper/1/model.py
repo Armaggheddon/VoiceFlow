@@ -85,4 +85,4 @@ class TritonPythonModel:
     def finalize(self):
         """Called when the model is unloaded."""
         self.model = None
-        print("Whisper model finalized.")
+        print("Whisper model finalized.", flush=True)

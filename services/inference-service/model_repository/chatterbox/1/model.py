@@ -153,4 +153,4 @@ class TritonPythonModel:
     def finalize(self):
         """Called when the model is unloaded."""
         self.model = None
-        print("Chatterbox TTS model finalized.")
+        print("Chatterbox TTS model finalized.", flush=True)
