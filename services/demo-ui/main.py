@@ -327,9 +327,9 @@ def read_audio_file_as_numpy(audio_path: str) -> Optional[Tuple[int, np.ndarray]
         return None
 
 # Create the Gradio interface
-with gr.Blocks(title="VoiceFlow - Enhanced AI Assistant", theme=gr.themes.Soft()) as demo:
+with gr.Blocks(title="VoiceFlow", theme=gr.themes.Soft()) as demo:
     gr.Markdown("""
-    # 🎙️ VoiceFlow - Enhanced AI Assistant
+    # 🎙️ VoiceFlow
     
     Advanced conversational AI interface with voice capabilities:
     - **Smart Chat**: Send text and audio messages in one interface
@@ -473,15 +473,14 @@ with gr.Blocks(title="VoiceFlow - Enhanced AI Assistant", theme=gr.themes.Soft()
         ### Features
         
         #### 💬 AI Chat
-        - **Multimodal Input**: Send text messages, upload audio files, or both
+        - **Multimodal Input**: Send text messages or record audio directly
         - **Voice Responses**: Enable TTS to hear AI responses
-        - **Real-time Configuration**: Set API credentials directly in the UI
         - **Smart Audio Handling**: Automatic transcription of audio inputs
         
         #### 🎙️ Voice-to-Text
         - Upload audio files or record directly
         - Supports multiple audio formats (WAV, MP3, M4A, OGG, FLAC)
-        - Real-time transcription with status updates
+        - Get transcriptions
         
         #### 🔊 Text-to-Voice
         - Convert any text to natural speech
@@ -491,40 +490,6 @@ with gr.Blocks(title="VoiceFlow - Enhanced AI Assistant", theme=gr.themes.Soft()
         ### API Endpoints
         
         **Base URL:** `{API_GATEWAY_URL}`
-        
-        #### Transcription
-        - **URL:** `POST /v1/transcribe`
-        - **Input:** Audio file (multipart/form-data)
-        
-        #### Synthesis
-        - **URL:** `POST /v1/synthesize`
-        - **Input:** Text (form data)
-        
-        #### Status Check
-        - **URL:** `GET /v1/tasks/{{task_id}}`
-        
-        ### Conversation Flow
-        
-        1. **Text + Audio Input**: Type and/or upload audio → AI processes both
-        2. **Smart Transcription**: Audio automatically transcribed and included
-        3. **AI Response**: LLM generates contextual response
-        4. **Optional TTS**: Response converted to speech if enabled
-        5. **Seamless Chat**: Continue conversation with full context
-        
-        ### Example cURL Commands
-        
-        ```bash
-        # Transcribe audio
-        curl -X POST "{API_GATEWAY_URL}/v1/transcribe" \\
-             -F "audio_file=@audio.wav"
-        
-        # Synthesize text
-        curl -X POST "{API_GATEWAY_URL}/v1/synthesize" \\
-             -F "text=Hello, this is a test message"
-        
-        # Check result
-        curl -X GET "{API_GATEWAY_URL}/v1/tasks/your-task-id"
-        ```
         """)
 
 if __name__ == "__main__":
