@@ -56,8 +56,8 @@ Built with a microservices architecture using FastAPI, Docker, and NVIDIA Triton
 ### 1. Clone and Start
 
 ```bash
-git clone <repository-url>
-cd voiceflow
+git clone https://github.com/Armaggheddon/VoiceFlow
+cd VoiceFlow
 docker compose up -d
 ```
 
