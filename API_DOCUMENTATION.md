@@ -1,8 +1,8 @@
-# VoiceFlow Simplified API Documentation
+# VoiceFlow API Documentation
 
 ## Overview
 
-VoiceFlow has been refactored to provide a simplified service for **transcription** and **speech synthesis** only. The API now supports two core functions:
+VoiceFlow provides a simplified service for **transcription** and **speech synthesis** only. The API supports two core functions:
 
 - **Voice-to-Text (V2T)**: Transcribe audio files to text
 - **Text-to-Voice (T2V)**: Convert text to synthesized speech

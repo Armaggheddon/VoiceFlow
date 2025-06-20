@@ -1,5 +1,3 @@
-# 
-
 <div id="top"></div>
 <br/>
 <br/>
@@ -25,7 +23,7 @@
 
 </div>
 
-## Overview
+## 📋 Overview
 
 VoiceFlow is a scalable, cloud-native platform that provides two core AI services through a unified API:
 
@@ -34,7 +32,7 @@ VoiceFlow is a scalable, cloud-native platform that provides two core AI service
 
 Built with a microservices architecture using FastAPI, Docker, and NVIDIA Triton Inference Server for high-performance AI model serving.
 
-## Features
+## ✨ Features
 
 - 🎙️ **Speech Recognition**: High-accuracy audio transcription using Whisper
 - 🔊 **Speech Synthesis**: Natural-sounding text-to-speech conversion
@@ -47,9 +45,9 @@ Built with a microservices architecture using FastAPI, Docker, and NVIDIA Triton
 - 🎨 **Web Interface**: Built-in Gradio-based demo UI
 - 📚 **Python Client**: Feature-rich client library with sync/async support
 
-## Quick Start
+## 🚀 Quick Start
 
-### Prerequisites
+### 📋 Prerequisites
 
 - Docker and Docker Compose
 - 8GB+ RAM (for AI models)
@@ -60,14 +58,14 @@ Built with a microservices architecture using FastAPI, Docker, and NVIDIA Triton
 ```bash
 git clone <repository-url>
 cd voiceflow
-docker-compose up -d
+docker compose up -d
 ```
 
 ### 2. Verify Services
 
 ```bash
 # Check all services are running
-docker-compose ps
+docker compose ps
 
 # Test the API
 curl http://localhost:8000/health
@@ -75,10 +73,7 @@ curl http://localhost:8000/health
 
 ### 3. Access the Demo UI
 
-Open your browser to [http://localhost:7860](http://localhost:7860) to access the web interface.
-
-![Demo UI Screenshot](docs/images/demo-ui-screenshot.png)
-*Image: Screenshot of the Gradio demo interface showing transcription and synthesis tabs*
+Open your browser to [http://localhost:7860](http://localhost:7860) to access the web interface. See the [Demo UI section](#-demo-ui) for more details.
 
 ### 4. Try the API
 
@@ -94,122 +89,120 @@ curl -X POST http://localhost:8000/v1/synthesize \
      -F "text=Hello, this is VoiceFlow!"
 ```
 
-## Architecture
+## 🏗️ Architecture
 
-![System Architecture](docs/images/architecture-diagram.png)
-*Image: Microservices architecture diagram showing API Gateway, Orchestrator, STT/TTS services, Triton Server, MinIO, and Redis*
+![System Architecture](.github/images/voiceflow_diagram.png)
+*Image: Microservices architecture diagram showing API Gateway, Orchestrator (Celery), STT/TTS services, Triton Server, MinIO, and Redis*
 
-### Core Components
+### 🔧 Core Components
 
 | Service | Technology | Purpose |
 |---------|------------|---------|
-| **API Gateway** | FastAPI | Public REST API endpoints and file upload handling |
-| **Orchestrator** | FastAPI + Celery | Workflow coordination and task management |
-| **STT Service** | FastAPI + Triton | Speech-to-text transcription using Whisper |
-| **TTS Service** | FastAPI + Triton | Text-to-speech synthesis |
+| **API Gateway** | FastAPI + Minio | Public REST API endpoints and file upload handling |
+| **Orchestrator** | Redis + Celery | Workflow coordination and task management |
+| **STT Service** | FastAPI + Triton + Minio | Speech-to-text transcription using Whisper |
+| **TTS Service** | FastAPI + Triton + Minio | Text-to-speech synthesis |
 | **Inference Service** | NVIDIA Triton | High-performance model serving |
 | **Demo UI** | Gradio | Web-based user interface |
-| **Cleanup Worker** | Python + Celery | Automatic file cleanup |
+| **Cleanup Worker** | Python + Celery + Minio | Automatic file cleanup |
 
-### Infrastructure
+### 🏗️ Infrastructure
 
 - **MinIO**: S3-compatible object storage for audio files
 - **Redis**: Message broker and result storage for Celery
 - **Docker**: Containerization and orchestration
 
-### Request Flow
+### 🔄 Request Flow
 
-#### Voice-to-Text (V2T)
+#### 🎙️ Voice-to-Text (V2T)
 1. Client uploads audio file to API Gateway
 2. File stored in MinIO, task queued in Orchestrator
 3. STT Service downloads file, processes with Whisper via Triton
 4. Transcription result stored in Redis
 5. Client polls for result and receives text
 
-#### Text-to-Speech (T2V)
+#### 🔊 Text-to-Speech (T2V)
 1. Client sends text to API Gateway
 2. Task queued in Orchestrator
 3. TTS Service generates audio via Triton, uploads to MinIO
 4. Audio URL stored in Redis
 5. Client polls for result and receives presigned download URL
 
-## Configuration
+## ⚙️ Configuration
 
-### Environment Variables
-
-Key configuration options available in `docker-compose.yaml`:
-
-```yaml
-# MinIO Configuration
-MINIO_ENDPOINT: "minio:9000"
-MINIO_ACCESS_KEY: "minioadmin"
-MINIO_SECRET_KEY: "minioadmin"
-
-# Redis Configuration  
-REDIS_HOST: "redis"
-REDIS_PORT: "6379"
-
-# Triton Configuration
-TRITON_SERVER_URL: "inference-service:8001"
-```
-
-### GPU Support
+### GPU Support (Default configuration)
 
 To enable GPU acceleration:
 
 1. Install NVIDIA Container Toolkit
-2. Uncomment GPU sections in `docker-compose.yaml`
-3. Restart services:
+2. Restart services:
 
 ```bash
-docker-compose down
-docker-compose up -d
+docker compose down
+docker compose up -d
 ```
 
 ### CPU-Only Mode
 
-VoiceFlow works without GPU, though with reduced performance:
+VoiceFlow works without GPU, though with reduced performance. To run in CPU-only mode, comment out the `deploy` section of the `inference-service` in `docker-compose.yaml`:
+
+```yaml
+inference-service:
+    build:
+      context: .
+      dockerfile: ./services/inference-service/Dockerfile
+    restart: unless-stopped
+    environment:
+      # Available whisper models:
+      # - tiny ~ 1GB RAM
+      # - base ~ 1GB RAM
+      # - small ~ 2GB RAM
+      # - medium ~ 5GB RAM
+      # - large ~ 10GB RAM
+      # - turbo ~ 6GB RAM
+      - WHISPER_MODEL_SIZE=small
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    volumes:
+      - ./services/inference-service/model_repository:/model_repository
+    networks:
+      - voiceflow-net
+```
+
+Then, use the same `docker-compose.yaml` file to start the services:
 
 ```bash
 # Use CPU-only configuration
-cp docker-compose.cpu.yaml docker-compose.yaml
-docker-compose up -d
+docker compose up -d
 ```
 
-### Custom Models
+### 🎛️ Model Customization
 
-To use different AI models:
+#### 🎤 STT Models (Whisper)
+Chose the whisper model size by setting the `WHISPER_MODEL_SIZE` environment variable in the `inference-service` section of `docker-compose.yaml`. Available options include:
+- `tiny` (1GB RAM)
+- `base` (1GB RAM)
+- `small` (2GB RAM)
+- `medium` (5GB RAM)
+- `large` (10GB RAM)
+- `turbo` (6GB RAM, optimized for speed)
 
-1. Place model files in `services/inference-service/model_repository/`
-2. Update model configuration in `config.pbtxt`
-3. Rebuild inference service:
+#### 🗣️ TTS Models (Chatterbox)
+- The model used for TTS is [Chatterbox](https://github.com/resemble-ai/chatterbox) from Resemble AI, which supports multiple voices and languages and is optimized for high-quality speech synthesis. 
 
-```bash
-docker-compose build inference-service
-docker-compose up -d inference-service
-```
+## 📚 API Reference
 
-### Model Customization
-
-#### STT Models (Whisper)
-- **whisper-tiny**: Fastest, lower accuracy (~39MB)
-- **whisper-base**: Balanced performance (~74MB) 
-- **whisper-small**: Better accuracy (~244MB)
-- **whisper-medium**: High accuracy (~769MB)
-- **whisper-large**: Best accuracy (~1550MB)
-
-#### TTS Models
-- Configure voice models in `services/inference-service/model_repository/tts/`
-- Supports various voice styles and languages
-
-## API Reference
-
-### Base URL
+### 🌐 Base URL
 ```
 http://localhost:8000
 ```
 
-### Endpoints
+### 🔗 Endpoints
 
 #### POST /v1/transcribe
 Transcribe audio file to text.
@@ -268,20 +261,20 @@ Get task result.
 }
 ```
 
-For complete API documentation, see [SIMPLIFIED_API_DOCUMENTATION.md](SIMPLIFIED_API_DOCUMENTATION.md).
+For complete API documentation, see [API_DOCUMENTATION.md](API_DOCUMENTATION.md).
 
-## Client Library
+## 🐍 Client Library
 
 VoiceFlow includes a comprehensive Python client library for easy integration:
 
-### Installation
+### 📦 Installation
 
 ```bash
 cd client-library
 pip install -e .
 ```
 
-### Quick Example
+### 💡 Quick Example
 
 ```python
 from voiceflow import VoiceFlowClient
@@ -301,7 +294,7 @@ print(f"Audio URL: {result.audio_url}")
 audio_array = client.synthesize("Hello!", output_format="numpy")
 ```
 
-### Features
+### ✨ Features
 
 - 🔄 **Sync & Async**: Both synchronous and asynchronous interfaces
 - 📝 **Type Hints**: Full type annotation support  
@@ -309,7 +302,7 @@ audio_array = client.synthesize("Hello!", output_format="numpy")
 - ⏱️ **Auto Polling**: Built-in result polling with timeouts
 - 🎵 **Multiple Formats**: Support for various audio output formats
 
-### Async Usage
+### ⚡ Async Usage
 
 ```python
 import asyncio
@@ -333,14 +326,18 @@ asyncio.run(main())
 
 See the [client library documentation](client-library/README.md) for detailed examples and API reference.
 
-## Demo UI
+## 🎨 Demo UI
 
 VoiceFlow includes a built-in web interface accessible at [http://localhost:7860](http://localhost:7860).
 
-![Demo UI Features](docs/images/demo-ui-features.png)
+| | |
+|:---:|:---:|
+|![demoui-aichat](.github/images/demoui_aichat.png)|![demoui-v2t](.github/images/demoui_v2t.png)|
+|![demoui-t2v](.github/images/demoui_t2v.png)|![demoui-history](.github/images/demoui_setup.png)|
+
 *Image: Demo UI showing both transcription and synthesis interfaces with file upload and audio playback*
 
-### Features
+### ✨ Features
 
 - 📁 **File Upload**: Drag-and-drop audio file upload
 - 🎙️ **Live Recording**: Record audio directly in browser
@@ -348,25 +345,10 @@ VoiceFlow includes a built-in web interface accessible at [http://localhost:7860
 - 📋 **History**: View previous transcriptions and syntheses
 - ⚙️ **Configuration**: Adjust API settings and model parameters
 
-### Custom Configuration
 
-The demo UI can be configured via environment variables:
+## 🛠️ Development
 
-```bash
-# Custom API endpoint
-export API_GATEWAY_URL="http://your-voiceflow-instance:8000"
-
-# Custom storage endpoint  
-export MINIO_URL="http://your-minio:9000"
-
-# Start demo UI
-cd services/demo-ui
-python main.py
-```
-
-## Development
-
-### Project Structure
+### 📁 Project Structure
 
 ```
 voiceflow/
@@ -384,101 +366,17 @@ voiceflow/
 └── docker-compose.yaml      # Service orchestration
 ```
 
-### Local Development
 
-1. **Setup development environment:**
-```bash
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements-dev.txt
-```
+## 🚀 Performance Tuning
 
-2. **Start infrastructure services:**
-```bash
-docker-compose up -d redis minio inference-service
-```
-
-3. **Run individual services locally:**
-```bash
-# Start API Gateway
-cd services/api-gateway
-python main.py
-
-# Start Orchestrator
-cd services/orchestrator  
-celery -A tasks worker --loglevel=info
-```
-
-### Testing
-
-```bash
-# Run integration tests
-python main.py
-
-# Test client library
-cd client-library
-python -m pytest tests/
-
-# Test specific service
-cd services/api-gateway
-python -m pytest
-```
-
-### Contributing
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
-
-## Production Deployment
-
-### Docker Swarm
-
-```bash
-# Initialize swarm
-docker swarm init
-
-# Deploy stack
-docker stack deploy -c docker-compose.prod.yaml voiceflow
-```
-
-### Kubernetes
-
-```bash
-# Apply Kubernetes manifests
-kubectl apply -f k8s/
-
-# Check deployment
-kubectl get pods -n voiceflow
-```
-
-### Monitoring
-
-VoiceFlow includes built-in health checks and monitoring:
-
-```bash
-# Service health
-curl http://localhost:8000/health
-
-# Metrics endpoint
-curl http://localhost:8000/metrics
-
-# Check service logs
-docker-compose logs -f api-gateway
-```
-
-## Performance Tuning
-
-### Scaling Guidelines
+### 📈 Scaling Guidelines
 
 - **API Gateway**: CPU-bound, scale horizontally
 - **STT/TTS Services**: GPU-bound, scale based on GPU availability  
 - **Orchestrator**: I/O-bound, scale based on queue depth
 - **Triton Server**: Memory-bound, tune model batch sizes
 
-### Resource Requirements
+### 💾 Resource Requirements
 
 | Component | Minimum | Recommended |
 |-----------|---------|-------------|
@@ -487,7 +385,7 @@ docker-compose logs -f api-gateway
 | **GPU** | None | 8+ GB VRAM |
 | **Storage** | 10 GB | 100+ GB SSD |
 
-### Optimization Tips
+### 🎯 Optimization Tips
 
 1. **Enable GPU acceleration** for 5-10x performance improvement
 2. **Tune batch sizes** in Triton model configurations
@@ -495,62 +393,26 @@ docker-compose logs -f api-gateway
 4. **Use faster storage** (SSD) for MinIO data volumes
 5. **Scale horizontally** by adding more service replicas
 
-## Troubleshooting
 
-### Common Issues
+## 🙌 Contributing
+Contributions are welcome! Whether it's bug fixes, new features, or documentation improvements, feel free to open an issue or submit a pull request.
 
-**Services won't start:**
-```bash
-# Check logs
-docker-compose logs
+## 📜 License
 
-# Rebuild images
-docker-compose build --no-cache
-```
+This project is licensed under the MIT License - see the [LICENSE](.LICENSE.md) file for details.
 
-**Audio processing errors:**
-```bash
-# Check file format support
-ffprobe audio_file.wav
-
-# Convert to supported format
-ffmpeg -i input.mp3 -ar 16000 -ac 1 output.wav
-```
-
-**GPU not detected:**
-```bash
-# Verify NVIDIA runtime
-docker run --rm --gpus all nvidia/cuda:11.0-base nvidia-smi
-```
-
-**High memory usage:**
-```bash
-# Monitor resource usage
-docker stats
-
-# Adjust model configurations
-vim services/inference-service/model_repository/*/config.pbtxt
-```
-
-### Getting Help
-
-- 📖 Check the [documentation](docs/)
-- 🐛 Report issues on [GitHub Issues](issues)
-- 💬 Join our [Discord community](discord-invite-link)
-- 📧 Email support: support@voiceflow.dev
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
+## 🙏 Acknowledgments
+- [Chatterbox](https://github.com/resemble-ai/chatterbox) for speech synthesis
 - [OpenAI Whisper](https://github.com/openai/whisper) for speech recognition
 - [NVIDIA Triton](https://github.com/triton-inference-server) for model serving
 - [FastAPI](https://fastapi.tiangolo.com/) for API framework
+- [Celery](https://docs.celeryproject.org/en/stable/) for task management
+- [MinIO](https://min.io/) for object storage
+- [Redis](https://redis.io/) for message brokering
 - [Gradio](https://gradio.app/) for the demo interface
 
 ---
+
 
 <div align="center">
 
