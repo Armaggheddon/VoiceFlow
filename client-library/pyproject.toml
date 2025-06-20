@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
-    {name = "VoiceFlow Team"},
+    {name = "Armaggheddon"},
 ]
 keywords = ["voice", "audio", "transcription", "synthesis", "speech", "tts", "stt"]
 classifiers = [
@@ -43,9 +43,9 @@ dev = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/voiceflow/voiceflow"
-"Bug Reports" = "https://github.com/voiceflow/voiceflow/issues"
-"Source" = "https://github.com/voiceflow/voiceflow"
+"Homepage" = "https://github.com/Armaggheddon/VoiceFlow"
+"Bug Reports" = "https://github.com/Armaggheddon/VoiceFlow/issues"
+"Source" = "https://github.com/Armaggheddon/VoiceFlow"
 
 [tool.setuptools.packages.find]
 where = ["."]
