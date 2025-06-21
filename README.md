@@ -25,7 +25,7 @@
 
 ## 📋 Overview
 
-VoiceFlow is a scalable, cloud-native platform that provides two core AI services through a unified API:
+VoiceFlow is a scalable platform that provides two core AI services through a unified API:
 
 - **🎙️ Voice-to-Text (V2T)**: Transcribe audio files to text using Whisper
 - **🔊 Text-to-Speech (T2V)**: Convert text to natural-sounding speech
